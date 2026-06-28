@@ -1,7 +1,12 @@
-import type { Category, LiveEvent, ScheduleEvent, Channel } from "@/types";
+import type { Category, LiveEvent, ScheduleEvent, Channel, StreamSource, GuideEntry } from "@/types";
+import { cacheGet, cacheSet } from "./utils";
 
 // IPTV-org API base
-const API_BASE = "https://iptv-org.github.io/api/v2";
+const API_BASE = "https://iptv-org.github.io/api";
+
+// ---------------------------------------------------------------------------
+// Mock fallback data — preserved for offline use
+// ---------------------------------------------------------------------------
 
 const CATEGORIES: Category[] = [
   { id: "1", name: "Basketball", slug: "basketball", count: 0, icon: "🏀" },
@@ -43,6 +48,43 @@ const CATEGORY_MAP: Record<string, string> = {
   documentary: "documentary",
 };
 
+const CATEGORY_ICONS: Record<string, string> = {
+  auto: "🏎️",
+  animation: "🎬",
+  business: "💼",
+  classic: "🎭",
+  comedy: "😂",
+  cooking: "🍳",
+  culture: "🎨",
+  documentary: "🎥",
+  education: "📚",
+  entertainment: "🎉",
+  family: "👨‍👩‍👧‍👦",
+  fashion: "👗",
+  food: "🍽️",
+  general: "📺",
+  health: "💪",
+  history: "📜",
+  hobby: "🎯",
+  kids: "🧸",
+  lifestyle: "🌿",
+  movies: "🎬",
+  music: "🎵",
+  news: "📰",
+  religion: "⛪",
+  science: "🔬",
+  series: "📺",
+  shopping: "🛍️",
+  sports: "⚽",
+  tech: "💻",
+  travel: "✈️",
+  weather: "🌤️",
+};
+
+// ---------------------------------------------------------------------------
+// Synchronous functions (existing signatures preserved)
+// ---------------------------------------------------------------------------
+
 export function getCategories(): Category[] {
   return CATEGORIES;
 }
@@ -51,124 +93,71 @@ export function getCategoryBySlug(slug: string): Category | undefined {
   return CATEGORIES.find((c) => c.slug === slug);
 }
 
-// Mock live events for the dashboard
-// These simulate what streamed.pk shows
 export function getPopularLive(): LiveEvent[] {
   return [
     {
-      id: "1",
-      title: "North Queensland Cowboys vs Penrith Panthers",
-      category: "Rugby",
-      categorySlug: "rugby",
-      viewers: 397,
-      startTime: "7:30 AM",
-      channel: "Fox Sports",
-      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-      live: true,
+      id: "1", title: "North Queensland Cowboys vs Penrith Panthers",
+      category: "Rugby", categorySlug: "rugby", viewers: 397,
+      startTime: "7:30 AM", channel: "Fox Sports",
+      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", live: true,
     },
     {
-      id: "2",
-      title: "Formula 3: Austria - R5 | Formula 2: Austria - R6 🏁",
-      category: "Motor Sports",
-      categorySlug: "motor-sports",
-      viewers: 163,
-      startTime: "8:00 AM",
-      channel: "ESPN",
-      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-      live: true,
+      id: "2", title: "Formula 3: Austria - R5 | Formula 2: Austria - R6 🏁",
+      category: "Motor Sports", categorySlug: "motor-sports", viewers: 163,
+      startTime: "8:00 AM", channel: "ESPN",
+      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", live: true,
     },
     {
-      id: "3",
-      title: "Collingwood Magpies vs Richmond Tigers",
-      category: "AFL",
-      categorySlug: "afl",
-      viewers: 89,
-      startTime: "6:15 AM",
-      channel: "Fox Footy",
-      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-      live: true,
+      id: "3", title: "Collingwood Magpies vs Richmond Tigers",
+      category: "AFL", categorySlug: "afl", viewers: 89,
+      startTime: "6:15 AM", channel: "Fox Footy",
+      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", live: true,
     },
     {
-      id: "4",
-      title: "World Rally Championship Greece 🏁",
-      category: "Motor Sports",
-      categorySlug: "motor-sports",
-      viewers: 72,
-      startTime: "5:30 AM",
-      channel: "WRC+",
-      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-      live: true,
+      id: "4", title: "World Rally Championship Greece 🏁",
+      category: "Motor Sports", categorySlug: "motor-sports", viewers: 72,
+      startTime: "5:30 AM", channel: "WRC+",
+      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", live: true,
     },
     {
-      id: "5",
-      title: "Dolphins vs New Zealand Warriors",
-      category: "Rugby",
-      categorySlug: "rugby",
-      viewers: 145,
-      startTime: "5:00 AM",
-      channel: "Sky Sport NZ",
-      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-      live: true,
+      id: "5", title: "Dolphins vs New Zealand Warriors",
+      category: "Rugby", categorySlug: "rugby", viewers: 145,
+      startTime: "5:00 AM", channel: "Sky Sport NZ",
+      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", live: true,
     },
     {
-      id: "6",
-      title: "ONE Fight Night 44: Jarvis v Rungrawee II",
-      category: "Fight",
-      categorySlug: "fight",
-      viewers: 234,
-      startTime: "2:00 AM",
-      channel: "ONE Championship",
-      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-      live: true,
+      id: "6", title: "ONE Fight Night 44: Jarvis v Rungrawee II",
+      category: "Fight", categorySlug: "fight", viewers: 234,
+      startTime: "2:00 AM", channel: "ONE Championship",
+      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", live: true,
     },
     {
-      id: "7",
-      title: "Fury Challenger Series 16",
-      category: "Fight",
-      categorySlug: "fight",
-      viewers: 56,
-      startTime: "2:00 AM",
-      channel: "UFC Fight Pass",
-      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-      live: true,
+      id: "7", title: "Fury Challenger Series 16",
+      category: "Fight", categorySlug: "fight", viewers: 56,
+      startTime: "2:00 AM", channel: "UFC Fight Pass",
+      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", live: true,
     },
     {
-      id: "8",
-      title: "Cage Fury FC 156",
-      category: "Fight",
-      categorySlug: "fight",
-      viewers: 41,
-      startTime: "2:00 AM",
-      channel: "Cage Fury",
-      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-      live: true,
+      id: "8", title: "Cage Fury FC 156",
+      category: "Fight", categorySlug: "fight", viewers: 41,
+      startTime: "2:00 AM", channel: "Cage Fury",
+      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", live: true,
     },
     {
-      id: "9",
-      title: "BKFC Fight Night: Vancamp v Cisneros",
-      category: "Fight",
-      categorySlug: "fight",
-      viewers: 33,
-      startTime: "2:00 AM",
-      channel: "BKFC",
-      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-      live: true,
+      id: "9", title: "BKFC Fight Night: Vancamp v Cisneros",
+      category: "Fight", categorySlug: "fight", viewers: 33,
+      startTime: "2:00 AM", channel: "BKFC",
+      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", live: true,
     },
     {
-      id: "10",
-      title: "Philadelphia 76ers vs Boston Celtics",
-      category: "Basketball",
-      categorySlug: "basketball",
-      viewers: 512,
-      startTime: "8:30 PM",
-      channel: "TNT",
-      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-      live: true,
+      id: "10", title: "Philadelphia 76ers vs Boston Celtics",
+      category: "Basketball", categorySlug: "basketball", viewers: 512,
+      startTime: "8:30 PM", channel: "TNT",
+      streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", live: true,
     },
   ];
 }
 
-// Get stream links for a specific event
 export function getStreamSources(eventId: string): { name: string; quality: string; lag: string }[] {
   const sources: Record<string, { name: string; quality: string; lag: string }[]> = {
     "1": [
@@ -227,70 +216,163 @@ export function getStreamSources(eventId: string): { name: string; quality: stri
   ];
 }
 
+/** Returns empty array — replaced by getGuideForChannel() */
 export function getSchedule(): ScheduleEvent[] {
-  return [
-    {
-      id: "s1",
-      title: "NBA: Lakers vs Warriors",
-      category: "Basketball",
-      startTime: "2026-06-27 8:00 PM",
-      channel: "ESPN",
-    },
-    {
-      id: "s2",
-      title: "Premier League: Arsenal vs Chelsea",
-      category: "Football",
-      startTime: "2026-06-28 3:00 PM",
-      channel: "Sky Sports",
-    },
-    {
-      id: "s3",
-      title: "NFL: Chiefs vs 49ers",
-      category: "American Football",
-      startTime: "2026-06-29 1:00 PM",
-      channel: "NFL Network",
-    },
-    {
-      id: "s4",
-      title: "Wimbledon Final 2026",
-      category: "Tennis",
-      startTime: "2026-07-02 2:00 PM",
-      channel: "BBC Sport",
-    },
-    {
-      id: "s5",
-      title: "UFC 320: Main Card",
-      category: "Fight",
-      startTime: "2026-07-01 10:00 PM",
-      channel: "ESPN+ PPV",
-    },
-  ];
+  return [];
 }
 
-// Fetch channels from iptv-org by category
-export async function fetchChannelsByCategory(
-  category: string
-): Promise<Channel[]> {
+export function getPlaylistUrl(category?: string): string {
+  const base = "https://iptv-org.github.io/iptv";
+  if (category && CATEGORY_MAP[category]) {
+    return `${base}/categories/${CATEGORY_MAP[category]}.m3u`;
+  }
+  return `${base}/index.m3u`;
+}
+
+// ---------------------------------------------------------------------------
+// Async API functions with caching
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Categories (async)
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch real categories from iptv-org API.
+ * Falls back to mock CATEGORIES array on failure.
+ * Cache: 24 hours.
+ */
+export async function fetchCategories(): Promise<Category[]> {
+  const cacheKey = "categories";
+  const cached = cacheGet<Category[]>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const res = await fetch(`${API_BASE}/categories.json`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const raw: { id: string; name: string; description: string }[] = await res.json();
+
+    const categories: Category[] = raw.map((c) => ({
+      id: c.id,
+      name: c.name,
+      slug: c.id,
+      count: 0,
+      icon: CATEGORY_ICONS[c.id] || "📺",
+    }));
+
+    cacheSet(cacheKey, categories, 24 * 60 * 60 * 1000);
+    return categories;
+  } catch {
+    return CATEGORIES;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Live Events
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch live events by combining channels.json and streams.json.
+ * Falls back to getPopularLive() mock data on failure.
+ * Cache: 1 hour.
+ */
+export async function getLiveEvents(): Promise<LiveEvent[]> {
+  const cacheKey = "live_events";
+  const cached = cacheGet<LiveEvent[]>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const [channels, streams] = await Promise.all([
+      fetch(`${API_BASE}/channels.json`),
+      fetch(`${API_BASE}/streams.json`),
+    ]);
+
+    if (!channels.ok || !streams.ok) throw new Error("Failed to fetch data");
+
+    const channelsData: any[] = await channels.json();
+    const streamsData: any[] = await streams.json();
+
+    const channelMap = new Map<string, any>();
+    for (const ch of channelsData) {
+      channelMap.set(ch.id, ch);
+    }
+
+    const events: LiveEvent[] = [];
+    const seenChannels = new Set<string>();
+
+    for (const stream of streamsData) {
+      if (!stream.channel) continue;
+      if (seenChannels.has(stream.channel)) continue;
+      seenChannels.add(stream.channel);
+
+      const ch = channelMap.get(stream.channel);
+      const categoryRaw = ch?.categories?.[0] || "general";
+      const categoryName = categoryRaw.charAt(0).toUpperCase() + categoryRaw.slice(1);
+
+      events.push({
+        id: stream.channel,
+        title: stream.title || ch?.name || stream.channel,
+        category: categoryName,
+        categorySlug: categoryRaw,
+        viewers: Math.floor(Math.random() * 500) + 10,
+        startTime: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        channel: ch?.name || stream.channel,
+        streamUrl: stream.url,
+        live: true,
+      });
+
+      if (events.length >= 100) break;
+    }
+
+    cacheSet(cacheKey, events, 60 * 60 * 1000);
+    return events;
+  } catch {
+    return getPopularLive();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Channels by category
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch channels from iptv-org and filter by category.
+ * Cache: 1 hour.
+ */
+export async function fetchChannelsByCategory(category: string): Promise<Channel[]> {
+  const cacheKey = `channels_${category}`;
+  const cached = cacheGet<Channel[]>(cacheKey);
+  if (cached) return cached;
+
   try {
     const mappedCategory = CATEGORY_MAP[category] || category;
-    const res = await fetch(
-      `${API_BASE}/channels.json?category=${mappedCategory}&limit=50`
-    );
+    const res = await fetch(`${API_BASE}/channels.json`);
     if (!res.ok) throw new Error("Failed to fetch channels");
-    const data = await res.json();
-    return data.map((ch: any) => ({
+    const data: any[] = await res.json();
+
+    const filtered = data.filter(
+      (ch: any) =>
+        ch.categories &&
+        ch.categories.some(
+          (cat: string) => cat === mappedCategory || cat === category
+        )
+    );
+
+    const channels: Channel[] = filtered.slice(0, 50).map((ch: any) => ({
       id: ch.id,
       name: ch.name,
-      logo: ch.logo,
-      url: ch.url?.[0] || "",
-      category: ch.categories?.[0]?.name || category,
-      country: ch.country?.name,
-      language: ch.languages?.[0]?.name,
+      logo: `https://raw.githubusercontent.com/iptv-org/iptv/master/logos/${ch.id}.png`,
+      url: "",
+      category: ch.categories?.[0] || category,
+      country: ch.country || undefined,
+      language: undefined,
       live: true,
       viewers: Math.floor(Math.random() * 500) + 10,
     }));
+
+    cacheSet(cacheKey, channels, 60 * 60 * 1000);
+    return channels;
   } catch {
-    // Return filtered mock data as fallback
     const allLive = getPopularLive();
     return allLive
       .filter((e) => e.categorySlug === category)
@@ -305,33 +387,121 @@ export async function fetchChannelsByCategory(
   }
 }
 
-// Get M3U playlist URL for a category
-export function getPlaylistUrl(category?: string): string {
-  const base = "https://iptv-org.github.io/iptv";
-  if (category && CATEGORY_MAP[category]) {
-    return `${base}/categories/${CATEGORY_MAP[category]}.m3u`;
+// ---------------------------------------------------------------------------
+// Stream sources (real API)
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch stream sources for a specific channel from streams.json.
+ */
+export async function getStreamSourcesForEvent(eventId: string): Promise<StreamSource[]> {
+  const cacheKey = "stream_sources_all";
+  const cached = cacheGet<any[]>(cacheKey);
+  let streams: any[] = cached ?? [];
+
+  if (streams.length === 0) {
+    try {
+      const res = await fetch(`${API_BASE}/streams.json`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      streams = await res.json();
+      cacheSet(cacheKey, streams, 60 * 60 * 1000);
+    } catch {
+      streams = [];
+    }
   }
-  return `${base}/index.m3u`;
+
+  return streams
+    .filter((s: any) => s.channel === eventId)
+    .map((s: any) => ({
+      channel: s.channel,
+      url: s.url,
+      quality: s.quality || undefined,
+      label: s.label || undefined,
+      referrer: s.referrer || undefined,
+      user_agent: s.user_agent || undefined,
+    }));
 }
 
-// Search channels from iptv-org
-export async function searchChannels(query: string): Promise<Channel[]> {
+// ---------------------------------------------------------------------------
+// Guide / EPG
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch guide (EPG) entries for a channel.
+ * Cache: 30 minutes.
+ */
+export async function getGuideForChannel(channelId: string): Promise<GuideEntry[]> {
+  const cacheKey = `guide_${channelId}`;
+  const cached = cacheGet<GuideEntry[]>(cacheKey);
+  if (cached) return cached;
+
   try {
     const res = await fetch(
-      `${API_BASE}/channels.json?name=${encodeURIComponent(query)}&limit=20`
+      `${API_BASE}/guides.json?channel=${encodeURIComponent(channelId)}`
     );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const text = await res.text();
+
+    // If the response is too large, fall back to empty
+    if (text.length > 5_000_000) {
+      cacheSet(cacheKey, [], 30 * 60 * 1000);
+      return [];
+    }
+
+    const all: GuideEntry[] = JSON.parse(text);
+    const filtered = all.filter((g) => g.channel === channelId);
+
+    cacheSet(cacheKey, filtered, 30 * 60 * 1000);
+    return filtered;
+  } catch {
+    cacheSet(cacheKey, [], 30 * 60 * 1000);
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Search
+// ---------------------------------------------------------------------------
+
+/**
+ * Search channels from iptv-org by name or category.
+ * Cache: 1 hour.
+ */
+export async function searchChannels(query: string): Promise<Channel[]> {
+  if (!query.trim()) return [];
+
+  const cacheKey = `search_${query.toLowerCase().replace(/\s+/g, "_")}`;
+  const cached = cacheGet<Channel[]>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const res = await fetch(`${API_BASE}/channels.json`);
     if (!res.ok) throw new Error("Failed to search");
-    const data = await res.json();
-    return data.map((ch: any) => ({
+    const data: any[] = await res.json();
+
+    const q = query.toLowerCase();
+    const filtered = data.filter(
+      (ch: any) =>
+        ch.name?.toLowerCase().includes(q) ||
+        (ch.categories &&
+          ch.categories.some((cat: string) => cat.toLowerCase().includes(q))) ||
+        (ch.country && ch.country.toLowerCase().includes(q))
+    );
+
+    const channels: Channel[] = filtered.slice(0, 50).map((ch: any) => ({
       id: ch.id,
       name: ch.name,
-      logo: ch.logo,
-      url: ch.url?.[0] || "",
-      category: ch.categories?.[0]?.name || "Other",
-      country: ch.country?.name,
-      language: ch.languages?.[0]?.name,
+      logo: `https://raw.githubusercontent.com/iptv-org/iptv/master/logos/${ch.id}.png`,
+      url: "",
+      category: ch.categories?.[0] || "Other",
+      country: ch.country || undefined,
+      language: undefined,
       live: true,
     }));
+
+    cacheSet(cacheKey, channels, 60 * 60 * 1000);
+    return channels;
   } catch {
     return [];
   }

@@ -44,3 +44,38 @@ export interface ScheduleEvent {
   endTime?: string;
   channel: string;
 }
+
+export interface StreamSource {
+  channel: string;
+  url: string;
+  quality?: string;
+  label?: string;
+  referrer?: string;
+  user_agent?: string;
+}
+
+export interface GuideEntry {
+  channel: string;
+  start: number;
+  stop: number;
+  title: string;
+  description?: string;
+  category?: string;
+}
+
+export interface IptvChannel {
+  id: string;
+  name: string;
+  alt_names?: string[];
+  network?: string;
+  country?: string;
+  categories: string[];
+  is_nsfw: boolean;
+  website?: string;
+}
+
+export interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  ttl: number;
+}
