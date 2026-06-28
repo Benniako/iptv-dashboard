@@ -1,20 +1,24 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
   subsets: ["latin"],
+  variable: "--font-inter",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
 });
 
 export const metadata: Metadata = {
-  title: "Website Clone",
-  description: "Pixel-perfect website clone",
+  title: "StreamTV - Live IPTV Dashboard",
+  description:
+    "Watch live sports, news, and entertainment channels from around the world.",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -25,7 +29,8 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased dark`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
