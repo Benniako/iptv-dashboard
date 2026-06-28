@@ -4,11 +4,14 @@ import Link from "next/link";
 import { useState } from "react";
 import { Search, Tv, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import SmartDnsStatus from "./SmartDnsStatus";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
-  { href: "/schedule", label: "Schedule" },
+  { href: "/guide", label: "Guide" },
+  { href: "/favorites", label: "Favorites" },
   { href: "/multiview", label: "Multi Stream" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export default function Header() {
@@ -63,6 +66,7 @@ export default function Header() {
 
         {/* Action Links */}
         <div className="hidden md:flex items-center gap-2">
+          <SmartDnsStatus />
           <a
             href="https://discord.gg/KHC4xTYZgv"
             target="_blank"
@@ -124,6 +128,13 @@ export default function Header() {
               </Link>
             ))}
             <hr className="my-2 border-border/60" />
+            <Link
+              href="/settings"
+              onClick={() => setMobileMenuOpen(false)}
+              className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"
+            >
+              Settings
+            </Link>
             <Link
               href="/docs"
               onClick={() => setMobileMenuOpen(false)}
